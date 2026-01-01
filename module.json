@@ -1,0 +1,28 @@
+{
+  "module_id": "kitchen",
+  "name": "Kitchen Display System",
+  "name_es": "Sistema de Pantalla de Cocina",
+  "version": "1.0.0",
+  "description": "Kitchen display system for managing orders and tickets in restaurant environments",
+  "description_es": "Sistema de pantalla de cocina para gestionar pedidos y comandas en entornos de restaurante",
+  "author": "ERPlora",
+  "category": "restaurant",
+  "dependencies": ["sales"],
+  "optional_dependencies": ["tables"],
+  "menu": {
+    "label": "Kitchen",
+    "label_es": "Cocina",
+    "icon": "restaurant-outline",
+    "url": "/modules/kitchen/",
+    "order": 45,
+    "show": true
+  },
+  "settings": {
+    "auto_accept_orders": false,
+    "show_timer": true,
+    "warning_time_minutes": 15,
+    "critical_time_minutes": 30,
+    "sound_enabled": true,
+    "stations_enabled": false
+  }
+}
