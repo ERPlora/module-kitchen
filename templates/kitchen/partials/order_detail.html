@@ -1,0 +1,309 @@
+{% load i18n djicons %}
+
+<div class="p-4">
+    <!-- Back Button -->
+    <button type="button"
+            hx-get="{% url 'kitchen:display' %}"
+            hx-target="#main-content-area"
+            hx-push-url="true"
+            class="btn btn-ghost mb-3">
+        {% icon "arrow-back-outline" %}
+        {% trans "Back to Display" %}
+    </button>
+
+    <!-- Order Header Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="card-title">{% trans "Order" %} #{{ order.order_number }}</h2>
+                    <p class="text-sm opacity-60">
+                        {% if order.table %}{% trans "Table" %} {{ order.table_display }} &middot; {% endif %}
+                        {{ order.get_order_type_display }}
+                        {% if order.waiter %} &middot; {{ order.waiter.name }}{% endif %}
+                    </p>
+                </div>
+                <span class="badge badge-lg color-{% if order.status == 'pending' %}warning{% elif order.status == 'preparing' %}primary{% elif order.status == 'ready' %}success{% elif order.status == 'served' %}medium{% elif order.status == 'cancelled' %}error{% else %}medium{% endif %}" id="order-status-badge">
+                    {{ order.get_status_display }}
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Stats Row -->
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold">{{ order.item_count }}</div>
+                    <div class="text-xs text-muted">{% trans "Items" %}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold {% if order.elapsed_minutes >= 30 %}text-error{% elif order.elapsed_minutes >= 15 %}text-warning{% endif %}">
+                        {{ order.elapsed_minutes }}{% trans "min" %}
+                    </div>
+                    <div class="text-xs text-muted">{% trans "Elapsed" %}</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold">
+                        {% if order.priority == 'rush' %}
+                        <span class="text-error">{% trans "Rush" %}</span>
+                        {% elif order.priority == 'vip' %}
+                        <span class="text-warning">{% trans "VIP" %}</span>
+                        {% else %}
+                        {% trans "Normal" %}
+                        {% endif %}
+                    </div>
+                    <div class="text-xs text-muted">{% trans "Priority" %}</div>
+                </div>
+            </div>
+
+            {% if order.notes %}
+            <div class="p-3 rounded-lg mb-3" style="background: var(--color-warning-bg, rgba(255,193,7,0.1));">
+                <p class="text-sm text-warning">{% icon "alert-circle-outline" %} {{ order.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Workflow Actions -->
+    {% if order.status != 'served' and order.status != 'paid' and order.status != 'cancelled' %}
+    <div class="flex flex-wrap gap-2 mb-4" id="order-actions">
+        {% if order.status == 'pending' %}
+        <button type="button" class="btn color-primary flex-1"
+                onclick="kitchenAction('{% url 'kitchen:start_order' order.id %}')">
+            {% icon "flame-outline" %} {% trans "Start Preparing" %}
+        </button>
+        <button type="button" class="btn flex-1"
+                style="background: var(--color-success); color: white;"
+                onclick="kitchenAction('{% url 'kitchen:complete_order' order.id %}')">
+            {% icon "checkmark-done-outline" %} {% trans "Mark Ready" %}
+        </button>
+        {% elif order.status == 'preparing' %}
+        <button type="button" class="btn flex-1"
+                style="background: var(--color-success); color: white;"
+                onclick="kitchenAction('{% url 'kitchen:complete_order' order.id %}')">
+            {% icon "checkmark-done-outline" %} {% trans "Mark Ready" %}
+        </button>
+        {% elif order.status == 'ready' %}
+        <button type="button" class="btn flex-1"
+                style="background: var(--color-success); color: white;"
+                onclick="kitchenAction('{% url 'kitchen:serve_order' order.id %}')">
+            {% icon "restaurant-outline" %} {% trans "Mark Served" %}
+        </button>
+        <button type="button" class="btn color-warning flex-1"
+                onclick="kitchenAction('{% url 'kitchen:recall_order' order.id %}')">
+            {% icon "arrow-undo-outline" %} {% trans "Recall" %}
+        </button>
+        {% endif %}
+
+        <!-- Priority -->
+        <div class="flex gap-1">
+            <button type="button" class="btn btn-sm btn-outline {% if order.priority == 'rush' %}color-error{% endif %}"
+                    onclick="setPriority('{{ order.id }}', 'rush')"
+                    title="{% trans 'Rush' %}">
+                {% icon "flash-outline" %}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline {% if order.priority == 'vip' %}color-warning{% endif %}"
+                    onclick="setPriority('{{ order.id }}', 'vip')"
+                    title="{% trans 'VIP' %}">
+                {% icon "star-outline" %}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline"
+                    onclick="setPriority('{{ order.id }}', 'normal')"
+                    title="{% trans 'Normal' %}">
+                {% icon "remove-outline" %}
+            </button>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-outline color-error"
+                onclick="cancelOrder()"
+                title="{% trans 'Cancel' %}">
+            {% icon "close-outline" %}
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Items Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="flex items-center justify-between">
+                <h3 class="card-title">{% trans "Items" %}</h3>
+                <span class="badge">{{ items|length }}</span>
+            </div>
+        </div>
+        <div class="list">
+            {% for item in items %}
+            <div class="list-item" id="detail-item-{{ item.id }}">
+                <div class="list-item-start">
+                    <span class="font-semibold">{{ item.quantity }}x</span>
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-label {% if item.status == 'ready' %}line-through text-muted{% endif %}">
+                        {{ item.product_name }}
+                    </div>
+                    <div class="list-item-note">
+                        {% if item.station %}{% icon "navigate-outline" css_class="text-xs" %} {{ item.station.name }}{% endif %}
+                        {% if item.modifiers %} &middot; {{ item.modifiers }}{% endif %}
+                        {% if item.notes %} &middot; <em class="text-warning">{{ item.notes }}</em>{% endif %}
+                    </div>
+                </div>
+                <div class="list-item-end flex items-center gap-2">
+                    <span class="badge badge-sm color-{% if item.status == 'ready' %}success{% elif item.status == 'cancelled' %}error{% elif item.status == 'preparing' %}primary{% else %}warning{% endif %}">
+                        {{ item.get_status_display }}
+                    </span>
+                    {% if item.status != 'ready' and item.status != 'cancelled' %}
+                    <button type="button"
+                            class="btn btn-sm btn-ghost"
+                            onclick="bumpItem('{{ item.id }}')"
+                            title="{% trans 'Bump item ready' %}">
+                        {% icon "checkmark-circle-outline" css_class="text-success" %}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-4 text-center text-muted">
+                {% trans "No items" %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Order Info -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% trans "Details" %}</h3>
+        </div>
+        <div class="list">
+            {% if order.table %}
+            <div class="list-item">
+                <div class="list-item-start">{% icon "grid-outline" css_class="text-muted" %}</div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{{ order.table_display }}</div>
+                    <div class="list-item-note">{% trans "Table" %}</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if order.waiter %}
+            <div class="list-item">
+                <div class="list-item-start">{% icon "people-outline" css_class="text-muted" %}</div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{{ order.waiter.name }}</div>
+                    <div class="list-item-note">{% trans "Waiter" %}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="list-item">
+                <div class="list-item-start">{% icon "time-outline" css_class="text-muted" %}</div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+                    <div class="list-item-note">{% trans "Created" %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kitchen Log -->
+    {% if logs %}
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center justify-between">
+                <h3 class="card-title">{% icon "time-outline" css_class="text-primary" %} {% trans "Kitchen Log" %}</h3>
+                <span class="badge">{{ logs|length }}</span>
+            </div>
+        </div>
+        <div class="list">
+            {% for log in logs %}
+            <div class="list-item">
+                <div class="list-item-start">
+                    {% if log.action == 'started' %}
+                    {% icon "flame-outline" css_class="text-primary" %}
+                    {% elif log.action == 'completed' %}
+                    {% icon "checkmark-done-outline" css_class="text-success" %}
+                    {% elif log.action == 'served' %}
+                    {% icon "restaurant-outline" css_class="text-medium" %}
+                    {% elif log.action == 'recalled' %}
+                    {% icon "arrow-undo-outline" css_class="text-warning" %}
+                    {% elif log.action == 'cancelled' %}
+                    {% icon "close-circle-outline" css_class="text-error" %}
+                    {% elif log.action == 'priority_changed' %}
+                    {% icon "flash-outline" css_class="text-warning" %}
+                    {% elif log.action == 'item_bumped' %}
+                    {% icon "checkmark-outline" css_class="text-success" %}
+                    {% else %}
+                    {% icon "document-text-outline" css_class="text-muted" %}
+                    {% endif %}
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-label">{{ log.get_action_display }}</div>
+                    <div class="list-item-note">
+                        {% if log.performed_by %}{{ log.performed_by.name }}{% endif %}
+                        {% if log.notes %} &middot; {{ log.notes }}{% endif %}
+                        {% if log.station %} &middot; {{ log.station.name }}{% endif %}
+                    </div>
+                </div>
+                <div class="list-item-end text-right">
+                    <div class="text-xs text-muted">{{ log.created_at|date:"H:i" }}</div>
+                    <div class="text-xs text-muted">{{ log.created_at|date:"d/m" }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function kitchenAction(url) {
+    fetch(url, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            htmx.ajax('GET', '{% url "kitchen:order_detail" order.id %}', '#main-content-area');
+        }
+    });
+}
+
+function bumpItem(itemId) {
+    fetch(`{% url 'kitchen:bump_item' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', itemId), {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            htmx.ajax('GET', '{% url "kitchen:order_detail" order.id %}', '#main-content-area');
+        }
+    });
+}
+
+function setPriority(orderId, priority) {
+    fetch(`{% url 'kitchen:set_priority' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', orderId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'priority=' + encodeURIComponent(priority),
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            htmx.ajax('GET', '{% url "kitchen:order_detail" order.id %}', '#main-content-area');
+        }
+    });
+}
+
+function cancelOrder() {
+    if (confirm('{% trans "Cancel this order?" %}')) {
+        const reason = prompt('{% trans "Reason (optional):" %}') || '';
+        fetch('{% url "kitchen:cancel_order" order.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'reason=' + encodeURIComponent(reason),
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                htmx.ajax('GET', '{% url "kitchen:display" %}', '#main-content-area');
+            }
+        });
+    }
+}
+</script>

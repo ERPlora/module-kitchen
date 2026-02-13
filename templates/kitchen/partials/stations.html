@@ -1,0 +1,81 @@
+{% load i18n djicons %}
+
+<!-- Header -->
+<div class="flex items-center justify-between p-4 pb-0">
+    <h2 class="text-lg font-semibold">{% trans "Kitchen Stations" %}</h2>
+    <span class="badge">{{ stations|length }}</span>
+</div>
+
+<div class="p-4">
+    <!-- Info banner -->
+    <div class="card mb-4" style="background: var(--color-primary-bg, rgba(59,130,246,0.08)); border-color: var(--color-primary);">
+        <div class="card-body flex items-start gap-3">
+            {% icon "information-circle-outline" css_class="text-xl text-primary flex-shrink-0 mt-0.5" %}
+            <div>
+                <p class="text-sm">{% trans "Kitchen stations are managed in the Orders module. This view shows station status and active workload." %}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for station in stations %}
+        <div class="card">
+            <div class="card-header">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+                             style="background: {% if station.color %}{{ station.color }}20{% else %}var(--color-primary-bg, rgba(59,130,246,0.1)){% endif %};">
+                            {% icon "flame-outline" css_class="text-xl" style=station.color|default:"" %}
+                        </div>
+                        <div>
+                            <h3 class="card-title">{{ station.name }}</h3>
+                            {% if station.description %}
+                            <p class="text-sm opacity-60">{{ station.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="badge {% if station.is_active %}color-success{% else %}{% endif %}">
+                        {% if station.is_active %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold {% if station.pending > 5 %}text-error{% elif station.pending > 0 %}text-warning{% else %}text-success{% endif %}">
+                            {{ station.pending }}
+                        </div>
+                        <div class="text-xs text-muted">{% trans "Pending Items" %}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold">{{ station.sort_order }}</div>
+                        <div class="text-xs text-muted">{% trans "Sort Order" %}</div>
+                    </div>
+                </div>
+
+                {% if station.pending > 0 %}
+                <div class="mt-3">
+                    <a hx-get="{% url 'kitchen:display' %}?station={{ station.id }}"
+                       hx-target="#main-content-area"
+                       hx-push-url="true"
+                       class="btn btn-sm btn-outline btn-block">
+                        {% icon "tv-outline" %} {% trans "View Orders" %}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full">
+            <div class="card">
+                <div class="card-body p-8 text-center">
+                    {% icon "flame-outline" css_class="text-5xl text-muted mb-3" %}
+                    <h3 class="text-lg font-semibold mb-1">{% trans "No Stations Configured" %}</h3>
+                    <p class="text-muted">{% trans "Kitchen stations are set up in the Orders module. Ask your administrator to configure them." %}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

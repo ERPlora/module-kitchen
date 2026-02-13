@@ -1,295 +1,108 @@
 """
-Kitchen Module Models
+Kitchen Display System (KDS) Models
 
-Provides models for:
-- KitchenConfig: Module settings (singleton)
-- KitchenStation: Kitchen preparation stations (grill, salads, etc.)
-- KitchenOrder: Orders sent to kitchen
-- KitchenOrderItem: Individual items within an order
+The kitchen module provides the display/operational layer for kitchen staff.
+Kitchen stations, orders, and station routing are defined in the orders module.
+This module adds:
+- KitchenSettings: Per-hub display and notification configuration
+- KitchenOrderLog: Audit trail for order actions on the KDS
 """
 
 from django.db import models
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+
+from apps.core.models import HubBaseModel
 
 
-class KitchenConfig(models.Model):
-    """
-    Singleton configuration for kitchen display settings.
-    """
-    auto_accept_orders = models.BooleanField(
-        default=False,
-        help_text=_("Automatically accept incoming orders")
-    )
-    show_timer = models.BooleanField(
-        default=True,
-        help_text=_("Show elapsed time on orders")
-    )
-    warning_time_minutes = models.PositiveIntegerField(
-        default=15,
-        help_text=_("Minutes until order shows warning color")
-    )
-    critical_time_minutes = models.PositiveIntegerField(
-        default=30,
-        help_text=_("Minutes until order shows critical color")
-    )
-    sound_enabled = models.BooleanField(
-        default=True,
-        help_text=_("Play sound on new orders")
-    )
-    stations_enabled = models.BooleanField(
-        default=False,
-        help_text=_("Enable kitchen stations")
-    )
+class KitchenSettings(HubBaseModel):
+    """Per-hub settings for the Kitchen Display System."""
 
-    class Meta:
-        verbose_name = _("Kitchen Configuration")
-        verbose_name_plural = _("Kitchen Configuration")
+    # Display
+    auto_accept_orders = models.BooleanField(default=False)
+    show_timer = models.BooleanField(default=True)
+    warning_time_minutes = models.PositiveIntegerField(default=15)
+    critical_time_minutes = models.PositiveIntegerField(default=30)
+    items_per_page = models.PositiveIntegerField(default=12)
+    auto_refresh_seconds = models.PositiveIntegerField(default=10)
+
+    # Sound
+    sound_enabled = models.BooleanField(default=True)
+    sound_on_new_order = models.BooleanField(default=True)
+    sound_on_rush = models.BooleanField(default=True)
+
+    # Auto-bump
+    auto_bump_enabled = models.BooleanField(default=False)
+    auto_bump_delay_seconds = models.PositiveIntegerField(default=5)
+
+    # Color coding
+    color_coding_enabled = models.BooleanField(default=True)
+
+    class Meta(HubBaseModel.Meta):
+        db_table = 'kitchen_settings'
+        verbose_name = _('Kitchen Settings')
+        verbose_name_plural = _('Kitchen Settings')
+        unique_together = [('hub_id',)]
 
     def __str__(self):
-        return "Kitchen Configuration"
+        return f"Kitchen Settings (Hub {self.hub_id})"
 
     @classmethod
-    def get_config(cls):
-        """Get or create the singleton configuration."""
-        config, _ = cls.objects.get_or_create(pk=1)
-        return config
+    def get_settings(cls, hub_id):
+        settings, _ = cls.all_objects.get_or_create(hub_id=hub_id)
+        return settings
 
 
-class KitchenStation(models.Model):
-    """
-    Kitchen preparation station (e.g., grill, salads, desserts).
-    Items can be routed to specific stations.
-    """
-    name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20, unique=True)
-    color = models.CharField(
-        max_length=7,
-        default="#3880ff",
-        help_text=_("Hex color for station display")
-    )
-    order = models.PositiveIntegerField(default=0)
-    is_active = models.BooleanField(default=True)
+class KitchenOrderLog(HubBaseModel):
+    """Audit trail for kitchen order actions."""
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['order', 'name']
-        verbose_name = _("Kitchen Station")
-        verbose_name_plural = _("Kitchen Stations")
-
-    def __str__(self):
-        return self.name
-
-
-class KitchenOrder(models.Model):
-    """
-    An order sent to the kitchen for preparation.
-    Links to a sale from the sales module.
-    """
-    STATUS_PENDING = 'pending'
-    STATUS_PREPARING = 'preparing'
-    STATUS_READY = 'ready'
-    STATUS_SERVED = 'served'
-    STATUS_CANCELLED = 'cancelled'
-
-    STATUS_CHOICES = [
-        (STATUS_PENDING, _('Pending')),
-        (STATUS_PREPARING, _('Preparing')),
-        (STATUS_READY, _('Ready')),
-        (STATUS_SERVED, _('Served')),
-        (STATUS_CANCELLED, _('Cancelled')),
-    ]
-
-    # Reference to sale (string ID to avoid hard dependency)
-    sale_id = models.CharField(
-        max_length=100,
-        db_index=True,
-        help_text=_("Reference to the sale in sales module")
-    )
-
-    # Optional table reference
-    table_id = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Reference to table if from tables module")
-    )
-    table_number = models.CharField(
-        max_length=20,
-        blank=True,
-        default='',
-        help_text=_("Table number for display")
-    )
-
-    # Order info
-    order_number = models.CharField(
-        max_length=50,
-        db_index=True,
-        help_text=_("Display order number")
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-        db_index=True
-    )
-    priority = models.PositiveIntegerField(
-        default=0,
-        help_text=_("Higher number = higher priority")
-    )
-    notes = models.TextField(
-        blank=True,
-        default='',
-        help_text=_("Special instructions for kitchen")
-    )
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    accepted_at = models.DateTimeField(null=True, blank=True)
-    ready_at = models.DateTimeField(null=True, blank=True)
-    served_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['-priority', 'created_at']
-        verbose_name = _("Kitchen Order")
-        verbose_name_plural = _("Kitchen Orders")
-        indexes = [
-            models.Index(fields=['status', 'created_at']),
-        ]
-
-    def __str__(self):
-        return f"Order #{self.order_number}"
-
-    @property
-    def elapsed_minutes(self):
-        """Calculate elapsed time since order was created."""
-        delta = timezone.now() - self.created_at
-        return int(delta.total_seconds() / 60)
-
-    @property
-    def elapsed_display(self):
-        """Return elapsed time as HH:MM string."""
-        minutes = self.elapsed_minutes
-        hours = minutes // 60
-        mins = minutes % 60
-        if hours > 0:
-            return f"{hours}:{mins:02d}"
-        return f"{mins}m"
-
-    @property
-    def status_class(self):
-        """Return CSS class based on elapsed time."""
-        if self.status in [self.STATUS_READY, self.STATUS_SERVED, self.STATUS_CANCELLED]:
-            return ''
-
-        config = KitchenConfig.get_config()
-        minutes = self.elapsed_minutes
-
-        if minutes >= config.critical_time_minutes:
-            return 'critical'
-        elif minutes >= config.warning_time_minutes:
-            return 'warning'
-        return ''
-
-    def accept(self):
-        """Mark order as being prepared."""
-        self.status = self.STATUS_PREPARING
-        self.accepted_at = timezone.now()
-        self.save(update_fields=['status', 'accepted_at'])
-
-    def mark_ready(self):
-        """Mark order as ready for service."""
-        self.status = self.STATUS_READY
-        self.ready_at = timezone.now()
-        self.save(update_fields=['status', 'ready_at'])
-
-    def mark_served(self):
-        """Mark order as served."""
-        self.status = self.STATUS_SERVED
-        self.served_at = timezone.now()
-        self.save(update_fields=['status', 'served_at'])
-
-    def cancel(self):
-        """Cancel the order."""
-        self.status = self.STATUS_CANCELLED
-        self.save(update_fields=['status'])
-
-
-class KitchenOrderItem(models.Model):
-    """
-    Individual item within a kitchen order.
-    """
-    STATUS_PENDING = 'pending'
-    STATUS_PREPARING = 'preparing'
-    STATUS_READY = 'ready'
-
-    STATUS_CHOICES = [
-        (STATUS_PENDING, _('Pending')),
-        (STATUS_PREPARING, _('Preparing')),
-        (STATUS_READY, _('Ready')),
+    ACTION_CHOICES = [
+        ('received', _('Received')),
+        ('accepted', _('Accepted')),
+        ('started', _('Started')),
+        ('bumped', _('Bumped')),
+        ('completed', _('Completed')),
+        ('served', _('Served')),
+        ('recalled', _('Recalled')),
+        ('cancelled', _('Cancelled')),
+        ('priority_changed', _('Priority Changed')),
     ]
 
     order = models.ForeignKey(
-        KitchenOrder,
+        'orders.Order',
         on_delete=models.CASCADE,
-        related_name='items'
+        related_name='kitchen_logs',
+        verbose_name=_('Order'),
+    )
+    order_item = models.ForeignKey(
+        'orders.OrderItem',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='kitchen_logs',
+        verbose_name=_('Order Item'),
     )
     station = models.ForeignKey(
-        KitchenStation,
+        'orders.KitchenStation',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='items'
+        null=True, blank=True,
+        related_name='kitchen_logs',
+        verbose_name=_('Station'),
     )
-
-    # Product info (copied from sale to avoid dependency)
-    product_id = models.CharField(max_length=100)
-    product_name = models.CharField(max_length=200)
-    quantity = models.PositiveIntegerField(default=1)
-
-    # Item-level notes/modifiers
-    modifiers = models.TextField(
-        blank=True,
-        default='',
-        help_text=_("Modifiers like 'no onions', 'extra cheese'")
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, verbose_name=_('Action'))
+    performed_by = models.ForeignKey(
+        'accounts.LocalUser',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='kitchen_actions',
+        verbose_name=_('Performed By'),
     )
-    notes = models.TextField(
-        blank=True,
-        default='',
-        help_text=_("Special instructions for this item")
-    )
+    notes = models.TextField(blank=True)
 
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['order', 'created_at']
-        verbose_name = _("Kitchen Order Item")
-        verbose_name_plural = _("Kitchen Order Items")
+    class Meta(HubBaseModel.Meta):
+        db_table = 'kitchen_order_log'
+        verbose_name = _('Kitchen Order Log')
+        verbose_name_plural = _('Kitchen Order Logs')
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.quantity}x {self.product_name}"
-
-    def mark_preparing(self):
-        """Mark item as being prepared."""
-        self.status = self.STATUS_PREPARING
-        self.save(update_fields=['status'])
-
-    def mark_ready(self):
-        """Mark item as ready."""
-        self.status = self.STATUS_READY
-        self.save(update_fields=['status'])
-        # Check if all items are ready
-        self._check_order_ready()
-
-    def _check_order_ready(self):
-        """Check if all items in order are ready."""
-        pending = self.order.items.exclude(status=self.STATUS_READY).exists()
-        if not pending:
-            self.order.mark_ready()
+        return f"{self.action} - Order #{self.order.order_number}"

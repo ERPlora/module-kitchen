@@ -1,0 +1,178 @@
+{% load i18n djicons %}
+
+<!-- Station Filter -->
+<div class="flex items-center gap-3 p-4 pb-0">
+    <select class="select flex-1"
+            hx-get="{% url 'kitchen:display' %}"
+            hx-target="#main-content-area"
+            hx-push-url="true"
+            name="station">
+        <option value="">{% trans "All Stations" %}</option>
+        {% for station in stations %}
+        <option value="{{ station.id }}" {% if selected_station == station.id|stringformat:"s" %}selected{% endif %}>
+            {{ station.name }}
+        </option>
+        {% endfor %}
+    </select>
+    <button type="button"
+            class="btn btn-outline"
+            hx-get="{% url 'kitchen:display' %}"
+            hx-target="#main-content-area"
+            hx-push-url="true"
+            title="{% trans 'Refresh' %}">
+        {% icon "refresh-outline" %}
+    </button>
+</div>
+
+<!-- Order Cards Grid -->
+<div class="p-4" id="kds-orders-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for order in orders %}
+        <div class="card {% if order.priority == 'rush' %}border-l-4{% endif %}"
+             style="{% if order.priority == 'rush' %}border-left-color: var(--color-error){% elif order.priority == 'vip' %}border-left-color: var(--color-warning){% endif %}"
+             id="kds-order-{{ order.id }}">
+
+            <!-- Order Header -->
+            <div class="card-header" style="padding-bottom: 0.5rem;">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="badge badge-lg color-{% if order.status == 'pending' %}warning{% elif order.status == 'preparing' %}primary{% else %}medium{% endif %}">
+                            #{{ order.order_number }}
+                        </span>
+                        {% if order.priority == 'rush' %}
+                        <span class="badge color-error badge-sm">{% icon "flash" css_class="text-xs" %} {% trans "RUSH" %}</span>
+                        {% elif order.priority == 'vip' %}
+                        <span class="badge color-warning badge-sm">{% icon "star" css_class="text-xs" %} {% trans "VIP" %}</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if settings.show_timer %}
+                        <span class="text-sm font-mono {% if order.elapsed_minutes >= settings.critical_time_minutes %}text-error font-bold{% elif order.elapsed_minutes >= settings.warning_time_minutes %}text-warning font-semibold{% else %}text-muted{% endif %}">
+                            {{ order.elapsed_minutes }}{% trans "min" %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-sm text-muted mt-1">
+                    {% if order.table %}{% icon "grid-outline" css_class="text-xs" %} {% trans "Table" %} {{ order.table_display }}{% endif %}
+                    {% if order.waiter %} &middot; {{ order.waiter.name }}{% endif %}
+                    &middot; {{ order.get_order_type_display }}
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="card-body" style="padding-top: 0.5rem; padding-bottom: 0.5rem;">
+                <div class="list" style="margin: -0.25rem 0;">
+                    {% for item in order.items.all %}
+                    {% if not item.is_deleted %}
+                    <div class="list-item" style="padding: 0.4rem 0; min-height: auto;"
+                         id="kds-item-{{ item.id }}">
+                        <div class="list-item-start" style="min-width: 28px;">
+                            <span class="font-bold {% if item.status == 'ready' %}text-success{% elif item.status == 'preparing' %}text-primary{% else %}text-base{% endif %}">
+                                {{ item.quantity }}x
+                            </span>
+                        </div>
+                        <div class="list-item-content" style="padding: 0;">
+                            <div class="list-item-label text-sm {% if item.status == 'ready' %}line-through text-muted{% endif %}">
+                                {{ item.product_name }}
+                            </div>
+                            {% if item.modifiers or item.notes %}
+                            <div class="list-item-note text-xs">
+                                {% if item.modifiers %}{{ item.modifiers }}{% endif %}
+                                {% if item.notes %}<em class="text-warning">{{ item.notes }}</em>{% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="list-item-end">
+                            {% if item.status != 'ready' and item.status != 'cancelled' %}
+                            <button type="button"
+                                    class="btn btn-sm btn-ghost"
+                                    onclick="bumpItem('{{ item.id }}')"
+                                    title="{% trans 'Bump item' %}">
+                                {% icon "checkmark-outline" css_class="text-success" %}
+                            </button>
+                            {% elif item.status == 'ready' %}
+                            {% icon "checkmark-circle" css_class="text-success text-lg" %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                {% if order.notes %}
+                <div class="mt-2 p-2 rounded-lg" style="background: var(--color-warning-bg, rgba(255,193,7,0.1));">
+                    <p class="text-xs text-warning">{% icon "alert-circle-outline" css_class="text-xs" %} {{ order.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Order Actions -->
+            <div class="card-body flex gap-2" style="padding-top: 0.5rem; border-top: 1px solid var(--color-base-300);">
+                {% if order.status == 'pending' %}
+                <button type="button" class="btn btn-sm color-primary flex-1"
+                        onclick="bumpOrder('{{ order.id }}')">
+                    {% icon "flame-outline" %} {% trans "Start" %}
+                </button>
+                {% elif order.status == 'preparing' %}
+                <button type="button" class="btn btn-sm flex-1"
+                        style="background: var(--color-success); color: white;"
+                        onclick="bumpOrder('{{ order.id }}')">
+                    {% icon "checkmark-done-outline" %} {% trans "Ready" %}
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-sm btn-outline"
+                        hx-get="{% url 'kitchen:order_detail' order.id %}"
+                        hx-target="#main-content-area"
+                        hx-push-url="true"
+                        title="{% trans 'Details' %}">
+                    {% icon "ellipsis-horizontal-outline" %}
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full">
+            <div class="card">
+                <div class="card-body p-8 text-center">
+                    {% icon "checkmark-circle-outline" css_class="text-5xl text-success mb-3" %}
+                    <h3 class="text-lg font-semibold mb-1">{% trans "All Caught Up!" %}</h3>
+                    <p class="text-muted">{% trans "No pending or preparing orders right now." %}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Auto-refresh -->
+{% if settings.auto_refresh_seconds %}
+<div hx-get="{% url 'kitchen:display' %}{% if selected_station %}?station={{ selected_station }}{% endif %}"
+     hx-target="#main-content-area"
+     hx-trigger="every {{ settings.auto_refresh_seconds }}s"
+     hx-swap="innerHTML"
+     style="display:none;"></div>
+{% endif %}
+
+<script>
+function bumpOrder(orderId) {
+    fetch(`{% url 'kitchen:bump_order' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', orderId), {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            htmx.ajax('GET', '{% url "kitchen:display" %}{% if selected_station %}?station={{ selected_station }}{% endif %}', '#main-content-area');
+        }
+    });
+}
+
+function bumpItem(itemId) {
+    fetch(`{% url 'kitchen:bump_item' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', itemId), {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            htmx.ajax('GET', '{% url "kitchen:display" %}{% if selected_station %}?station={{ selected_station }}{% endif %}', '#main-content-area');
+        }
+    });
+}
+</script>

@@ -1,0 +1,254 @@
+{% load i18n djicons %}
+
+<div class="p-4">
+    <!-- Display Settings -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "tv-outline" css_class="text-primary" %} {% trans "Display Settings" %}</h3>
+        </div>
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Auto Accept Orders" %}</div>
+                    <div class="list-item-note">{% trans "Automatically start preparing new orders" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="auto_accept_orders"
+                               {% if config.auto_accept_orders %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "auto_accept_orders", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Show Timer" %}</div>
+                    <div class="list-item-note">{% trans "Display elapsed time on order cards" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="show_timer"
+                               {% if config.show_timer %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "show_timer", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Color Coding" %}</div>
+                    <div class="list-item-note">{% trans "Color-code orders based on elapsed time" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="color_coding_enabled"
+                               {% if config.color_coding_enabled %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "color_coding_enabled", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Warning Time" %}</div>
+                    <div class="list-item-note">{% trans "Minutes before an order is flagged as warning (yellow)" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="number" name="warning_time_minutes"
+                           value="{{ config.warning_time_minutes }}"
+                           class="input input--sm"
+                           style="width: 80px;"
+                           hx-post="{% url 'kitchen:settings_input' %}"
+                           hx-vals='js:{name: "warning_time_minutes", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none"
+                           min="1" max="120">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Critical Time" %}</div>
+                    <div class="list-item-note">{% trans "Minutes before an order is flagged as critical (red)" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="number" name="critical_time_minutes"
+                           value="{{ config.critical_time_minutes }}"
+                           class="input input--sm"
+                           style="width: 80px;"
+                           hx-post="{% url 'kitchen:settings_input' %}"
+                           hx-vals='js:{name: "critical_time_minutes", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none"
+                           min="1" max="120">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Items Per Page" %}</div>
+                    <div class="list-item-note">{% trans "Maximum number of order cards shown on display" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="number" name="items_per_page"
+                           value="{{ config.items_per_page }}"
+                           class="input input--sm"
+                           style="width: 80px;"
+                           hx-post="{% url 'kitchen:settings_input' %}"
+                           hx-vals='js:{name: "items_per_page", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none"
+                           min="4" max="50">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Auto Refresh" %}</div>
+                    <div class="list-item-note">{% trans "Seconds between automatic display refresh" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="number" name="auto_refresh_seconds"
+                           value="{{ config.auto_refresh_seconds }}"
+                           class="input input--sm"
+                           style="width: 80px;"
+                           hx-post="{% url 'kitchen:settings_input' %}"
+                           hx-vals='js:{name: "auto_refresh_seconds", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none"
+                           min="3" max="120">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Settings -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "volume-high-outline" css_class="text-warning" %} {% trans "Sound & Notifications" %}</h3>
+        </div>
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Sound Enabled" %}</div>
+                    <div class="list-item-note">{% trans "Play sounds for kitchen events" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="sound_enabled"
+                               {% if config.sound_enabled %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "sound_enabled", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "New Order Sound" %}</div>
+                    <div class="list-item-note">{% trans "Alert when a new order arrives" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="sound_on_new_order"
+                               {% if config.sound_on_new_order %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "sound_on_new_order", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Rush Order Sound" %}</div>
+                    <div class="list-item-note">{% trans "Special alert for rush/VIP orders" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="sound_on_rush"
+                               {% if config.sound_on_rush %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "sound_on_rush", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto Bump Settings -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "timer-outline" css_class="text-success" %} {% trans "Auto Bump" %}</h3>
+        </div>
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Auto Bump Enabled" %}</div>
+                    <div class="list-item-note">{% trans "Automatically bump ready orders off the display after a delay" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle">
+                        <input type="checkbox" name="auto_bump_enabled"
+                               {% if config.auto_bump_enabled %}checked{% endif %}
+                               hx-post="{% url 'kitchen:settings_toggle' %}"
+                               hx-vals='js:{name: "auto_bump_enabled", value: event.target.checked ? "true" : "false"}'
+                               hx-swap="none">
+                        
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Auto Bump Delay" %}</div>
+                    <div class="list-item-note">{% trans "Seconds before a ready order is automatically bumped" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="number" name="auto_bump_delay"
+                           value="{{ config.auto_bump_delay_seconds }}"
+                           class="input input--sm"
+                           style="width: 80px;"
+                           hx-post="{% url 'kitchen:settings_input' %}"
+                           hx-vals='js:{name: "auto_bump_delay", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none"
+                           min="1" max="300">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Settings -->
+    <div class="card" style="border-color: var(--color-warning)">
+        <div class="card-header">
+            <h3 class="card-title text-warning">{% trans "Reset Settings" %}</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">{% trans "Restore all kitchen display settings to their default values." %}</p>
+            <button type="button" class="btn color-warning btn-outline"
+                    onclick="resetSettings()">
+                {% icon "refresh-outline" %} {% trans "Reset to Defaults" %}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function resetSettings() {
+    if (confirm('{% trans "Reset all settings to defaults?" %}')) {
+        fetch('{% url "kitchen:settings_reset" %}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        }).then(r => {
+            if (r.ok) htmx.ajax('GET', '{% url "kitchen:settings" %}', '#main-content-area');
+        });
+    }
+}
+</script>
