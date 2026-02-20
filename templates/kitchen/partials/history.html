@@ -10,7 +10,7 @@
                   hx-trigger="submit, change from:input[type=date]">
                 <div class="flex items-center gap-3 mb-3">
                     <div class="input-group flex-1">
-                        <span class="input-group__start">{% icon "search-outline" %}</span>
+                        <span class="input-group-start">{% icon "search-outline" %}</span>
                         <input type="search" name="q" value="{{ search }}"
                                class="input" placeholder="{% trans 'Search by order number or notes...' %}"
                                hx-get="{% url 'kitchen:history' %}"
