@@ -432,7 +432,7 @@ def settings_save(request):
         config.save()
         return JsonResponse({'success': True, 'message': _('Settings saved')})
     except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({'success': False, 'error': _('Invalid JSON')}, status=400)
 
 
 @login_required
