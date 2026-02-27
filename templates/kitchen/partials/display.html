@@ -33,7 +33,7 @@
              id="kds-order-{{ order.id }}">
 
             <!-- Order Header -->
-            <div class="card-header" style="padding-bottom: 0.5rem;">
+            <div class="card-header" style="padding-bottom: 0.5rem; flex-direction: column; align-items: stretch;">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <span class="badge badge-lg color-{% if order.status == 'pending' %}warning{% elif order.status == 'preparing' %}primary{% else %}medium{% endif %}">
@@ -45,13 +45,11 @@
                         <span class="badge color-warning badge-sm">{% icon "star" css_class="text-xs" %} {% trans "VIP" %}</span>
                         {% endif %}
                     </div>
-                    <div class="flex items-center gap-2">
-                        {% if settings.show_timer %}
-                        <span class="text-sm font-mono {% if order.elapsed_minutes >= settings.critical_time_minutes %}text-error font-bold{% elif order.elapsed_minutes >= settings.warning_time_minutes %}text-warning font-semibold{% else %}text-muted{% endif %}">
-                            {{ order.elapsed_minutes }}{% trans "min" %}
-                        </span>
-                        {% endif %}
-                    </div>
+                    {% if settings.show_timer %}
+                    <span class="text-sm font-mono {% if order.elapsed_minutes >= settings.critical_time_minutes %}text-error font-bold{% elif order.elapsed_minutes >= settings.warning_time_minutes %}text-warning font-semibold{% else %}text-muted{% endif %}">
+                        {{ order.elapsed_minutes }}{% trans "min" %}
+                    </span>
+                    {% endif %}
                 </div>
                 <div class="text-sm text-muted mt-1">
                     {% if order.table %}{% icon "grid-outline" css_class="text-xs" %} {% trans "Table" %} {{ order.table_display }}{% endif %}
@@ -121,13 +119,6 @@
                     {% icon "checkmark-done-outline" %} {% trans "Ready" %}
                 </button>
                 {% endif %}
-                <button type="button" class="btn btn-sm btn-outline"
-                        hx-get="{% url 'kitchen:order_detail' order.id %}"
-                        hx-target="#main-content-area"
-                        hx-push-url="true"
-                        title="{% trans 'Details' %}">
-                    {% icon "ellipsis-horizontal-outline" %}
-                </button>
             </div>
         </div>
         {% empty %}
