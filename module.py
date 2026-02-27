@@ -22,6 +22,8 @@ PERMISSIONS = [
     'kitchen.view_kitchensettings',
     'kitchen.change_kitchensettings',
     'kitchen.view_kitchenorderlog',
+
+    'kitchen.manage_settings',
 ]
 
 DEPENDENCIES = ['orders']

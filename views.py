@@ -13,7 +13,7 @@ from django.utils.translation import gettext as _
 from django.utils import timezone
 from django.db.models import Q
 
-from apps.accounts.decorators import login_required
+from apps.accounts.decorators import login_required, permission_required
 from apps.core.htmx import htmx_view
 
 from orders.models import Order, OrderItem, KitchenStation
@@ -394,6 +394,7 @@ def api_order_count(request):
 # ==============================================================================
 
 @login_required
+@permission_required('kitchen.manage_settings')
 @htmx_view('kitchen/pages/settings.html', 'kitchen/partials/settings.html')
 def settings(request):
     """Kitchen display settings."""
@@ -403,6 +404,7 @@ def settings(request):
 
 
 @login_required
+@permission_required('kitchen.manage_settings')
 @require_POST
 def settings_save(request):
     """Save kitchen settings via JSON."""
@@ -436,6 +438,7 @@ def settings_save(request):
 
 
 @login_required
+@permission_required('kitchen.manage_settings')
 @require_POST
 def settings_toggle(request):
     """Toggle a single boolean setting via HTMX."""
