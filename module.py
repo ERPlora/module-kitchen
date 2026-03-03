@@ -27,3 +27,16 @@ PERMISSIONS = [
 ]
 
 DEPENDENCIES = ['orders']
+
+ROLE_PERMISSIONS = {
+    "admin": ["*"],
+    "manager": [
+        "change_kitchensettings",
+        "view_kitchenorderlog",
+        "view_kitchensettings",
+    ],
+    "employee": [
+        "view_kitchenorderlog",
+        "view_kitchensettings",
+    ],
+}
