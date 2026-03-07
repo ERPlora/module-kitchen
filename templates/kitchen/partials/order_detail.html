@@ -246,39 +246,32 @@
 function kitchenAction(url) {
     fetch(url, {
         method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'},
-    }).then(r => r.json()).then(data => {
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(data => {
         if (data.success) {
             htmx.ajax('GET', '{% url "kitchen:order_detail" order.id %}', '#main-content-area');
         }
-    });
-}
+    },
 
 function bumpItem(itemId) {
     fetch(`{% url 'kitchen:bump_item' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', itemId), {
         method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'},
-    }).then(r => r.json()).then(data => {
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(data => {
         if (data.success) {
             htmx.ajax('GET', '{% url "kitchen:order_detail" order.id %}', '#main-content-area');
         }
-    });
-}
+    },
 
 function setPriority(orderId, priority) {
     fetch(`{% url 'kitchen:set_priority' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', orderId), {
         method: 'POST',
         headers: {
             'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'priority=' + encodeURIComponent(priority),
-    }).then(r => r.json()).then(data => {
+            'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'priority=' + encodeURIComponent(priority)}).then(r => r.json()).then(data => {
         if (data.success) {
             htmx.ajax('GET', '{% url "kitchen:order_detail" order.id %}', '#main-content-area');
         }
-    });
-}
+    },
 
 function cancelOrder() {
     if (confirm('{% trans "Cancel this order?" %}')) {
@@ -287,14 +280,12 @@ function cancelOrder() {
             method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'reason=' + encodeURIComponent(reason),
-        }).then(r => r.json()).then(data => {
+                'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'reason=' + encodeURIComponent(reason)}).then(r => r.json()).then(data => {
             if (data.success) {
                 htmx.ajax('GET', '{% url "kitchen:display" %}', '#main-content-area');
             }
-        });
+        },
     }
 }
 </script>

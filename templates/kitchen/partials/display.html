@@ -148,22 +148,19 @@
 function bumpOrder(orderId) {
     fetch(`{% url 'kitchen:bump_order' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', orderId), {
         method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'},
-    }).then(r => r.json()).then(data => {
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(data => {
         if (data.success) {
             htmx.ajax('GET', '{% url "kitchen:display" %}{% if selected_station %}?station={{ selected_station }}{% endif %}', '#main-content-area');
         }
-    });
-}
+    },
 
 function bumpItem(itemId) {
     fetch(`{% url 'kitchen:bump_item' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', itemId), {
         method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'},
-    }).then(r => r.json()).then(data => {
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(data => {
         if (data.success) {
             htmx.ajax('GET', '{% url "kitchen:display" %}{% if selected_station %}?station={{ selected_station }}{% endif %}', '#main-content-area');
         }
-    });
+    },
 }
 </script>

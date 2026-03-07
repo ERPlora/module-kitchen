@@ -117,11 +117,10 @@
 function serveOrder(orderId) {
     fetch(`{% url 'kitchen:serve_order' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', orderId), {
         method: 'POST',
-        headers: {'X-CSRFToken': '{{ csrf_token }}'},
-    }).then(r => r.json()).then(data => {
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(data => {
         if (data.success) {
             htmx.ajax('GET', '{% url "kitchen:ready" %}', '#main-content-area');
         }
-    });
+    },
 }
 </script>
